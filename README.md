@@ -2,6 +2,8 @@ TODO
 
 remove p2wsh, add p2pk
 
+ref: https://unchained.com/blog/bitcoin-address-types-compared/
+
 P2PK
 ===
 
