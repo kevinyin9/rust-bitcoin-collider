@@ -6,74 +6,94 @@ extern crate bech32;
 
 use secp256k1::Secp256k1;
 use rand::rngs::OsRng;
-use std::env;
-use hex::FromHex;
+use std::collections::HashMap;
 
 mod address;
-mod query;
 
-#[derive(Serialize, Deserialize)]
-struct KeyPair {
-    address: String,
-    private_key: String,
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+struct Balance {
+    final_balance: i64,
 }
 
-fn main(){
+type BalanceMap = std::collections::HashMap<String, Balance>;
 
-    let args: Vec<String> = env::args().collect();
-    let mut count = 1;
-    let conn:;
-    let thread_handle = std::thread::spawn(move || {
-        let mut key_pairs: Vec<KeyPair> = Vec::new();
-        
-        loop {
-            let key_pair_json: Option<String> = conn.rpop("key_pairs").unwrap();
-        
-            match key_pair_json {
-                Some(json) => {
-                    let key_pair: KeyPair = serde_json::from_str(&json).unwrap();
-                    key_pairs.push(key_pair);
-        
-                    if key_pairs.len() >= 100 {
-                        // let body = reqwest::get("https://blockchain.info/balance?active=\"\"")
-                        //     .await?
-                        //     .text()
-                        //     .await?;
 
-                        // println!("body = {:?}", body);
-                        key_pairs.clear();
-                    }
-                },
-                None => {
-                    // Sleep for a while before trying to get the next key pair.
-                    std::thread::sleep(std::time::Duration::from_secs(1));
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // let client = redis::Client::open("redis://127.0.0.1/")?;
+    // let mut con = client.get_connection()?;
+    // let thread_handle = std::thread::spawn(move || {
+    //     let mut key_pairs: Vec<KeyPair> = Vec::new();
+        
+        // loop {
+            // let key_pair_json: Option<String> = conn.rpop("key_pairs").unwrap();
+        
+    //         match key_pair_json {
+    //             Some(json) => {
+    //                 let key_pair: KeyPair = serde_json::from_str(&json).unwrap();
+    //                 key_pairs.push(key_pair);
+        
+    //                 if key_pairs.len() >= 100 {
+    //                     // let body = reqwest::get("https://blockchain.info/balance?active=\"\"")
+    //                     //     .await?
+    //                     //     .text()
+    //                     //     .await?;
+
+    //                     // println!("body = {:?}", body);
+    //                     key_pairs.clear();
+    //                 }
+    //             },
+    //             None => {
+    //                 // Sleep for a while before trying to get the next key pair.
+    //                 std::thread::sleep(std::time::Duration::from_secs(1));
+    //             }
+    //         }
+    //     }
+    // });
+    
+    loop{
+        let mut key_pairs: HashMap<String, secp256k1::SecretKey> = HashMap::new();
+        let mut address_string = String::with_capacity(100 * 64);
+
+        for _ in 0..20 {
+            //generate private and public keys
+            let secp256k1 = Secp256k1::new();
+            let mut rng = OsRng::new().expect("OsRng");
+            let (_private_key, public_key) = secp256k1.generate_keypair(&mut rng);
+            let serialized_public_key = public_key.serialize();
+
+            let _address = address::BitcoinAddress::p2pkh(&serialized_public_key, address::Network::Mainnet);
+
+            key_pairs.insert(_address.clone().to_string(), _private_key.clone());
+
+            address_string.push_str(&_address.to_string());
+            address_string.push_str("|");
+        }
+        let url = "https://blockchain.info/balance?active=".to_string() + &address_string.to_string();
+        let response = query(&url).await?;
+        
+        for (address, balance) in response.iter() {
+            if balance.final_balance != 0 {
+                if let Some(key) = key_pairs.get(address) {
+                    println!("Address: {}, PrivateKey: {}, Final Balance: {}", address, key, balance.final_balance);
                 }
             }
         }
-    });
-    
-    loop{
-        count += 1;
-        println!("{}", count);
-        //generate private and public keys
-        let secp256k1 = Secp256k1::new();
-        let mut rng = OsRng::new().expect("OsRng");
-        let (_private_key, public_key) = secp256k1.generate_keypair(&mut rng);
-        let serialized_public_key = public_key.serialize();
+        
+    }
+    Ok(())
+}
 
-        // print!("Private Key : {}\n", _private_key);
-        // print!("Public Key : {}\n", public_key);
+async fn query(s: &String) -> Result<BalanceMap, Box<dyn std::error::Error>> {
+    let response = reqwest::get(s).await?;
+    let body = response.text().await?;
+    let balance_map: BalanceMap = serde_json::from_str(&body)?;
 
-        let _address = address::BitcoinAddress::p2pkh(&serialized_public_key, address::Network::Mainnet);
-        let key_pair = KeyPair{
-            address: _address.to_string(),
-            private_key: _private_key.to_string(),
-        };
+    Ok(balance_map)
+}
 
-        let key_pair_json = serde_json::to_strinng(&key_pair).unwrap();
-
-        let _: () = conn.lpush("key_pairs", key_pair_json).unwrap();
-}   
 
 // fn exec_args_p2pkh_p2wpkh(args: &Vec<String>, network: address::Network, serialized_public_key: &[u8]) {
 //     let _address = address::BitcoinAddress::p2pkh(&serialized_public_key, network);

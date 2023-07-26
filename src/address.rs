@@ -1,25 +1,26 @@
 use std::fmt;
-use rust_base58::{ToBase58};
-use crypto::digest::{Digest};
+use rust_base58::ToBase58;
+use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 use crypto::ripemd160::Ripemd160; 
-use bech32;
+// use bech32;
 
-
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Payload {
     PubkeyHash(Vec<u8>),
-    ScriptHash(Vec<u8>),
-    WitnessProgram {
-        version: bech32::u5,
-        program: Vec<u8>,
-    },
+    // ScriptHash(Vec<u8>),
+    // WitnessProgram {
+    //     version: bech32::u5,
+    //     program: Vec<u8>,
+    // },
 }
-
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Network {
     Mainnet,
-    Testnet
+    // Testnet
 }
 
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct BitcoinAddress {
     network : Network,
     payload : Payload
@@ -32,7 +33,7 @@ impl fmt::Display for BitcoinAddress {
                 let mut address = Vec::new();
                 let prefix = match self.network {
                     Network::Mainnet => vec![0x00],
-                    Network::Testnet => vec![0x6F]
+                    // Network::Testnet => vec![0x6F]
                 };
                 address.extend(prefix);
                 address.extend(payload);
@@ -40,30 +41,30 @@ impl fmt::Display for BitcoinAddress {
                 address.extend(checksum[..4].iter().cloned());
                 write!(f,"{}", address.to_base58())
             }
-            Payload::ScriptHash(ref payload) => {
-                let mut address = Vec::new();
-                let prefix = match self.network {
-                    Network::Mainnet => vec![0x05],
-                    Network::Testnet => vec![0xC4]
-                };
-                address.extend(prefix);
-                address.extend(payload);
-                let checksum = double_sha256(&address);
-                address.extend(checksum[..4].iter().cloned());
-                write!(f,"{}", address.to_base58())
-            }
-            Payload::WitnessProgram {
-                version: v,
-                program: ref p,
-            } => {
-                let prefix = match self.network {
-                    Network::Mainnet => "bc",
-                    Network::Testnet => "tb"
-                };
-                let mut bech32_writer = bech32::Bech32Writer::new(prefix, f)?;
-                bech32::WriteBase32::write_u5(&mut bech32_writer, v)?;
-                bech32::ToBase32::write_base32(p, &mut bech32_writer)
-            }
+            // Payload::ScriptHash(ref payload) => {
+            //     let mut address = Vec::new();
+            //     let prefix = match self.network {
+            //         Network::Mainnet => vec![0x05],
+            //         Network::Testnet => vec![0xC4]
+            //     };
+            //     address.extend(prefix);
+            //     address.extend(payload);
+            //     let checksum = double_sha256(&address);
+            //     address.extend(checksum[..4].iter().cloned());
+            //     write!(f,"{}", address.to_base58())
+            // }
+            // Payload::WitnessProgram {
+            //     version: v,
+            //     program: ref p,
+            // } => {
+            //     let prefix = match self.network {
+            //         Network::Mainnet => "bc",
+            //         Network::Testnet => "tb"
+            //     };
+            //     let mut bech32_writer = bech32::Bech32Writer::new(prefix, f)?;
+            //     bech32::WriteBase32::write_u5(&mut bech32_writer, v)?;
+            //     bech32::ToBase32::write_base32(p, &mut bech32_writer)
+            // }
         }
 	}
 }
@@ -81,48 +82,48 @@ impl BitcoinAddress {
         }
     }
 
-    pub fn p2sh(script: &[u8], network :Network) -> BitcoinAddress {
-        if script.len() == 0 {
-            panic!("Script must be at least 1 opcode");
-        }
-        let hash = hash160(&script);
-        BitcoinAddress {
-            network : network,
-            payload : Payload::ScriptHash(hash)
-        }
-    }
+    // pub fn p2sh(script: &[u8], network :Network) -> BitcoinAddress {
+    //     if script.len() == 0 {
+    //         panic!("Script must be at least 1 opcode");
+    //     }
+    //     let hash = hash160(&script);
+    //     BitcoinAddress {
+    //         network : network,
+    //         payload : Payload::ScriptHash(hash)
+    //     }
+    // }
 
-    pub fn p2wpkh(public_key : &[u8], network :Network) -> BitcoinAddress {
-        if public_key.len() != 33 {
-            panic!("Public key must be 33 bytes(compressed) length")
-        }
-        let mut script = vec![0x00, 0x14]; //OP_0 + 20-byte push
-        script.extend(public_key.to_vec());
-        let hscript = hash160(&script);
-        BitcoinAddress {
-            network : network,
-            payload : Payload::WitnessProgram {
-                version: bech32::u5::try_from_u8(0).unwrap(),
-                program : hscript
-            }
-        }
-    }
+    // pub fn p2wpkh(public_key : &[u8], network :Network) -> BitcoinAddress {
+    //     if public_key.len() != 33 {
+    //         panic!("Public key must be 33 bytes(compressed) length")
+    //     }
+    //     let mut script = vec![0x00, 0x14]; //OP_0 + 20-byte push
+    //     script.extend(public_key.to_vec());
+    //     let hscript = hash160(&script);
+    //     BitcoinAddress {
+    //         network : network,
+    //         payload : Payload::WitnessProgram {
+    //             version: bech32::u5::try_from_u8(0).unwrap(),
+    //             program : hscript
+    //         }
+    //     }
+    // }
 
-    pub fn p2wsh(script: &[u8], network :Network) -> BitcoinAddress{
-        if script.len() == 0 {
-            panic!("Script must be at least 1 opcode");
-        }
-        let mut mscript = vec![0x00, 0x20]; //OP_0 + 32-byte push 
-        mscript.extend(script.to_vec());
-        let hscript = sha256(&script); 
-        BitcoinAddress {
-            network : network,
-            payload : Payload::WitnessProgram {
-                version: bech32::u5::try_from_u8(0).unwrap(),
-                program : hscript
-            }
-        }
-    }
+    // pub fn p2wsh(script: &[u8], network :Network) -> BitcoinAddress{
+    //     if script.len() == 0 {
+    //         panic!("Script must be at least 1 opcode");
+    //     }
+    //     let mut mscript = vec![0x00, 0x20]; //OP_0 + 32-byte push 
+    //     mscript.extend(script.to_vec());
+    //     let hscript = sha256(&script); 
+    //     BitcoinAddress {
+    //         network : network,
+    //         payload : Payload::WitnessProgram {
+    //             version: bech32::u5::try_from_u8(0).unwrap(),
+    //             program : hscript
+    //         }
+    //     }
+    // }
     
 }
 

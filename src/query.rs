@@ -1,9 +1,9 @@
 use reqwest;
 
-use serde::Deserialize;
+// use serde::Deserialize;
 
-#[derive(Deserialize)]
-struct 
+// #[derive(Deserialize)]
+// struct 
 fn get_balance() {
     let body = reqwest::get("https://blockchain.info/balance?active={}")
             .await?
