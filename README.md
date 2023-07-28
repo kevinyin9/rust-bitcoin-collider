@@ -1,3 +1,14 @@
+The idea is from https://lbc.cryptoguru.org/about
+
+> The "Large Bitcoin Collider" (LBC - a homage to LHC) is a distributed effort to find at least one collision of private Bitcoin keys by creating addresses to private keys in a continuous 2^160 range. These are checked against the list of known BTC addresses with funds on them. In the rare event of a collision, the funds on the address in question would become accessible to the collision finder.
+
+> *Gasp* That's Illegal! Racist! Impossible!
+
+> It's neither of these. For the history and reasons why this project started, see [this topic on bitcointalk](https://bitcointalk.org/index.php?topic=1555043.0). It is not illegal to search for colliding private keys. It may be illegal - depending on the jurisdiction you are in - to actually claim possession of funds found that way. It is also not impossible and actually the pool has already found several private keys - see [pool trophies](https://lbc.cryptoguru.org/trophies).
+
+> Why doing this?
+> Because current consensus is "that's impossible" and that is a gauntlet thrown down. It is a technical challenge and in mankind history, many things deemed impossible later turned out to be perfectly possible. This project is the practice part of the theory behind Bitcoin encryption and protection of funds. See our take at the [theory](https://lbc.cryptoguru.org/man/theory) behind all this.
+
 TODO
 
 remove p2wsh, add p2pk
