@@ -1,3 +1,5 @@
+# Bitcoin Collider in Rust
+
 The idea is from https://lbc.cryptoguru.org/about
 
 > The "Large Bitcoin Collider" (LBC - a homage to LHC) is a distributed effort to find at least one collision of private Bitcoin keys by creating addresses to private keys in a continuous 2^160 range. These are checked against the list of known BTC addresses with funds on them. In the rare event of a collision, the funds on the address in question would become accessible to the collision finder.
@@ -9,14 +11,29 @@ The idea is from https://lbc.cryptoguru.org/about
 > Why doing this?
 > Because current consensus is "that's impossible" and that is a gauntlet thrown down. It is a technical challenge and in mankind history, many things deemed impossible later turned out to be perfectly possible. This project is the practice part of the theory behind Bitcoin encryption and protection of funds. See our take at the [theory](https://lbc.cryptoguru.org/man/theory) behind all this.
 
-TODO
+## Usage
+```
+cargo run --release
+```
 
-remove p2wsh, add p2pk
+## TODO List
 
-ref: https://unchained.com/blog/bitcoin-address-types-compared/
+* Add P2PK
 
-P2PK
-===
+## [Here is four main cryptography that Bitcoin used](https://unchained.com/blog/bitcoin-address-types-compared/):
+This repository implements P2PKH, P2SH, P2WPKH, and P2WSH. However, given that P2PKH addresses hold the majority of Bitcoin, the current focus of this repository is solely on P2PKH.
+
+| Type	| First Seen | BTC Supply| 	Use	| Encoding| 	Prefix| 	Characters| 
+| --- | --- | --- | --- |--- |--- |--- |
+| P2PK	| Jan 2009	|9% (1.7M)	|Obsolete	|		
+| P2PKH	| Jan 2009	|43% (8.3M)	|Decreasing|	Base58|	1	|26 – 34|
+| P2MS	| Jan 2012	|Negligible	|Obsolete		|	
+| P2SH	| Apr 2012	|24% (4.6M)	|Decreasing|	Base58	|3	|34|
+| P2WPKH	| Aug 2017|	20% (3.8M)	|Increasing	|Bech32	|bc1q	|42|
+| P2WSH	| Aug 2017	|4% (0.8M)	|Increasing	|Bech32	|bc1q	|62|
+| P2TR	| Nov 2021	|0.1% (0.02M)|	Increasing	|Bech32m	|bc1p	|62|
+
+### P2PK
 
 Pay-to-Public-Key (P2PK) is the original method of receiving bitcoin, and it does not involve an address. Instead, as the name suggests, bitcoin is paid directly to an exposed public key. The first ever bitcoin transaction from one person to another used P2PK, when Satoshi Nakamoto sent coins to Hal Finney in Block 170.
 
@@ -30,8 +47,7 @@ Current supply: ~ 1.7M BTC or 9%
 
 Status:	Obsolete
 
-P2PKH
-===
+### P2PKH
 
 Pay-to-Public-Key-Hash (P2PKH) was available for use at bitcoin’s beginning, and it showed up on the blockchain for the first time less than two weeks after the genesis block. P2PKH makes several improvements upon P2PK, such as utilizing an address. As discussed in our earlier article, addresses contain a checksum that helps prevent typos and lost bitcoin.
 
@@ -47,8 +63,7 @@ Current supply:	~ 8.3M BTC or 43%
 
 Status: Decreasing popularity
 
-P2SH
-===
+### P2SH
 
 Pay-to-Script-Hash (P2SH) was introduced to bitcoin as a soft fork in accordance with BIP 16 on April 1, 2012. Like most forks, the story behind it is fascinating. P2SH shares a lot in common with P2PKH. The main difference is that the address is created by hashing a redeem script instead of hashing a single public key. 
 
@@ -66,8 +81,7 @@ Current supply:	~ 4.6M BTC or 24%
 
 Status:	Decreasing popularity
 
-P2WPKH
-===
+### P2WPKH
 
 Pay-to-Witness-Public-Key-Hash (P2WPKH) is the first of two address types introduced to bitcoin upon the SegWit soft fork in August 2017. The story behind this extremely important and particularly contentious soft fork is documented in a book called The Blocksize War, written by Jonathan Bier.
 
