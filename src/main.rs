@@ -52,7 +52,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //         }
     //     }
     // });
-    
+    let mut counter: i64 = 0;   
     loop{
         let mut key_pairs: HashMap<String, secp256k1::SecretKey> = HashMap::new();
         let mut address_string = String::with_capacity(100 * 64);
@@ -71,6 +71,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             address_string.push_str(&_address.to_string());
             address_string.push_str("|");
         }
+        counter += 20;
         let url = "https://blockchain.info/balance?active=".to_string() + &address_string.to_string();
         let response = query(&url).await?;
         
@@ -80,6 +81,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("Address: {}, PrivateKey: {}, Final Balance: {}", address, key, balance.final_balance);
                 }
             }
+        }
+        if counter % 10000 == 0 {
+            println!("Current count = {}", counter);
         }
         
     }
