@@ -75,7 +75,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     loop {
         // key_pairs.clear();
         let mut address_string = String::with_capacity(100 * 64);
-        
+        let mut key_pairs = key_pairs_clone.lock().unwrap();
+
         // let start = Instant::now();
         for _ in 0..50 {
             //generate private and public keys
@@ -85,11 +86,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let _address = address::BitcoinAddress::p2pkh(&serialized_public_key, address::Network::Mainnet);
             
-            let mut key_pairs = key_pairs_clone.lock().unwrap();
+            
             key_pairs.insert(_address.clone().to_string(), _private_key.clone());
 
             address_string.push_str(&_address.to_string());
             address_string.push_str("|");
+        }
+
+        if key_pairs.len() > 10000 { // Threshold value, adjust as needed
+            key_pairs.clear();
         }
         // let duration = start.elapsed();
         // println!("Time taken to generate accounts: {:?}", duration);
