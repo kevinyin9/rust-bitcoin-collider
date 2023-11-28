@@ -32,7 +32,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let key_pairs: Arc<Mutex<HashMap<String, secp256k1::SecretKey>>> = Arc::new(Mutex::new(HashMap::new()));
     let secp256k1 = Secp256k1::new();
     let (tx, mut rx) = watch::channel(String::new());
-    for i in 0..5 {
+    for i in 0..4 {
         let (key_pairs, mut rx, counter) = (Arc::clone(&key_pairs), rx.clone(), Arc::clone(&counter));
         tokio::spawn(async move{
             loop {
