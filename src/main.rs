@@ -9,6 +9,8 @@ use rand::rngs::OsRng;
 use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
+use std::time::{Instant, Duration};
+use std::thread;
 
 mod address;
 
@@ -54,14 +56,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //         }
     //     }
     // });
-    let mut counter: i64 = 0;   
-    loop{
-        let mut key_pairs: HashMap<String, secp256k1::SecretKey> = HashMap::new();
+    let mut counter: i64 = 0;
+    let mut key_pairs: HashMap<String, secp256k1::SecretKey> = HashMap::new();
+    let secp256k1 = Secp256k1::new();
+    loop {
+        key_pairs.clear();
         let mut address_string = String::with_capacity(100 * 64);
 
-        for _ in 0..19 {
+        // let start = Instant::now();
+        for _ in 0..20 {
             //generate private and public keys
-            let secp256k1 = Secp256k1::new();
             let mut rng = OsRng::new().expect("OsRng");
             let (_private_key, public_key) = secp256k1.generate_keypair(&mut rng);
             let serialized_public_key = public_key.serialize();
@@ -73,6 +77,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             address_string.push_str(&_address.to_string());
             address_string.push_str("|");
         }
+        // let duration = start.elapsed();
+        // println!("Time taken to generate accounts: {:?}", duration);
+        // println!("Rate: {} accounts per second", 20.0 / duration.as_secs_f64());
+        // println!("{}", address_string);
+
         // For testing
         // let secp256k1 = Secp256k1::new();
         // let mut rng = OsRng::new().expect("OsRng");
@@ -83,8 +92,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         counter += 20;
         let url = "https://blockchain.info/balance?active=".to_string() + &address_string.to_string();
         let response = query(&url).await?;
-        
-        
+
         for (address, balance) in response.iter() {
             if balance.final_balance != 0 {
                 if let Some(key) = key_pairs.get(address) {
