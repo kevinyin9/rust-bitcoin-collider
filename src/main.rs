@@ -7,7 +7,6 @@ extern crate bech32;
 use secp256k1::Secp256k1;
 use rand::rngs::OsRng;
 use std::collections::HashMap;
-use std::error::Error;
 
 mod address;
 
@@ -72,23 +71,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             address_string.push_str(&_address.to_string());
             address_string.push_str("|");
         }
+        // For testing
+        // address_string.push_str("bc1p7d8n5y3zy3gqrd80huuu9926t9ctll9mla9vk6tvr98ccst9rp9s3uve3d|");
+        
         counter += 20;
         let url = "https://blockchain.info/balance?active=".to_string() + &address_string.to_string();
         let response = query(&url).await?;
+        
         
         for (address, balance) in response.iter() {
             if balance.final_balance != 0 {
                 if let Some(key) = key_pairs.get(address) {
                     println!("Address: {}, PrivateKey: {}, Final Balance: {}", address, key, balance.final_balance);
+                } else {
+                    println!("Missing key for Address: {}, Final Balance: {}", address, balance.final_balance);
                 }
             }
         }
-        if counter % 10000 == 0 {
-            println!("Current count = {}", counter);
+        if counter % 100 == 0 {
+            print!("\rCurrent count = {}", counter);
         }
         
     }
-    Ok(())
+    // Ok(())
 }
 
 async fn query(s: &String) -> Result<BalanceMap, Box<dyn std::error::Error>> {
@@ -98,8 +103,8 @@ async fn query(s: &String) -> Result<BalanceMap, Box<dyn std::error::Error>> {
     match serde_json::from_str(&body) {
         Ok(balance_map) => Ok(balance_map),
         Err(e) => {
-            // Here you can log the error and/or handle it as needed
-            eprintln!("Failed to parse JSON: {}", e);
+            eprintln!("body: {}", body);
+            eprintln!("e: {}", e);
             Err(Box::new(e))
         }
     }
