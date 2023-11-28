@@ -64,7 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let mut counter: i64 = *counter_clone.lock().unwrap();
                 // let counter = Arc::try_unwrap(counter.into()).unwrap();
                 counter += 20;
-                println!("{}", counter);
+                // println!("{}", counter);
                 if counter % 10000 == 0 {
                     println!("\rCurrent count = {}", counter);
                 }
@@ -99,7 +99,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let mut counter: i64 = *counter_clone2.lock().unwrap();
                 // let counter = Arc::try_unwrap(counter.into()).unwrap();
                 counter += 20;
-                println!("{}", counter);
+                // println!("{}", counter);
                 if counter % 10000 == 0 {
                     println!("\rCurrent count = {}", counter);
                 }
@@ -148,7 +148,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn query(s: &String) -> Result<BalanceMap, Box<dyn std::error::Error>> {
-    println!("{}", s);
+    // println!("{}", s);
     const MAX_RETRIES: u32 = 5;
     const RETRY_DELAY: Duration = Duration::from_secs(5);
     for attempt in 1..=MAX_RETRIES {
