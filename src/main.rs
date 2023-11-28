@@ -60,8 +60,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                     let mut counter = counter.lock().unwrap();
                     // let counter = Arc::try_unwrap(counter.into()).unwrap();
-                    *counter += 20;
-                    println!("counter: {}", *counter);
+                    *counter += 50;
+                    // println!("counter: {}", *counter);
                     if *counter % 10000 == 0 {
                         println!("\rCurrent count = {}", *counter);
                     }
@@ -76,7 +76,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut address_string = String::with_capacity(100 * 64);
         
         // let start = Instant::now();
-        for _ in 0..20 {
+        for _ in 0..50 {
             //generate private and public keys
             let mut rng = OsRng::new().expect("OsRng");
             let (_private_key, public_key) = secp256k1.generate_keypair(&mut rng);
