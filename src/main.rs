@@ -32,7 +32,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let key_pairs: Arc<Mutex<HashMap<String, secp256k1::SecretKey>>> = Arc::new(Mutex::new(HashMap::new()));
     let secp256k1 = Secp256k1::new();
     let (tx, mut rx) = watch::channel(String::new());
-    for i in 0..3 {
+    for i in 0..5 {
         let (key_pairs, mut rx, counter) = (Arc::clone(&key_pairs), rx.clone(), Arc::clone(&counter));
         tokio::spawn(async move{
             loop {
@@ -42,10 +42,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     let key_pairs = key_pairs.lock().unwrap();
                     for (address, balance) in response.iter() {
+                        // println!("{}: {}", address, balance.final_balance);
                         if balance.final_balance != 0 {
                             if let Some(key) = key_pairs.get(address) {
                                 let data = format!("Address: {}, PrivateKey: {}, Final Balance: {}\n", address, key, balance.final_balance);
-                                println!("{}", data);
+                                
                                 let mut file = OpenOptions::new()
                                                     .create(true)
                                                     .append(true)
@@ -93,7 +94,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // let duration = start.elapsed();
         // println!("Time taken to generate accounts: {:?}", duration);
         // println!("Rate: {} accounts per second", 20.0 / duration.as_secs_f64());
-        // println!("{}", address_string);
 
         // For testing
         // let secp256k1 = Secp256k1::new();
@@ -103,6 +103,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // address_string.push_str("bc1p7d8n5y3zy3gqrd80huuu9926t9ctll9mla9vk6tvr98ccst9rp9s3uve3d|");
 
         let url = "https://blockchain.info/balance?active=".to_string() + &address_string.to_string();
+        // println!("{}", url);
         tx.send(url)?;
     }
     // Ok(())
