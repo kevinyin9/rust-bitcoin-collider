@@ -121,7 +121,7 @@ async fn query(s: &String) -> Result<BalanceMap, Box<dyn std::error::Error>> {
                         match serde_json::from_str(&body) {
                             Ok(balance_map) => return Ok(balance_map),
                             Err(e) => {
-                                eprintln!("Failed to parse response on attempt {}: {}", attempt, e);
+                                eprintln!("Failed to parse response on attempt {}: {}", attempt, body, e);
                             }
                         }
                     }
