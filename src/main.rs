@@ -7,6 +7,8 @@ extern crate bech32;
 use secp256k1::Secp256k1;
 use rand::rngs::OsRng;
 use std::collections::HashMap;
+use std::fs::OpenOptions;
+use std::io::prelude::*;
 
 mod address;
 
@@ -57,7 +59,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut key_pairs: HashMap<String, secp256k1::SecretKey> = HashMap::new();
         let mut address_string = String::with_capacity(100 * 64);
 
-        for _ in 0..20 {
+        for _ in 0..19 {
             //generate private and public keys
             let secp256k1 = Secp256k1::new();
             let mut rng = OsRng::new().expect("OsRng");
@@ -72,6 +74,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             address_string.push_str("|");
         }
         // For testing
+        // let secp256k1 = Secp256k1::new();
+        // let mut rng = OsRng::new().expect("OsRng");
+        // let (_private_key, public_key) = secp256k1.generate_keypair(&mut rng);
+        // key_pairs.insert("bc1p7d8n5y3zy3gqrd80huuu9926t9ctll9mla9vk6tvr98ccst9rp9s3uve3d".to_string(), _private_key.clone());
         // address_string.push_str("bc1p7d8n5y3zy3gqrd80huuu9926t9ctll9mla9vk6tvr98ccst9rp9s3uve3d|");
         
         counter += 20;
@@ -82,14 +88,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         for (address, balance) in response.iter() {
             if balance.final_balance != 0 {
                 if let Some(key) = key_pairs.get(address) {
-                    println!("Address: {}, PrivateKey: {}, Final Balance: {}", address, key, balance.final_balance);
+                    let data = format!("Address: {}, PrivateKey: {}, Final Balance: {}\n", address, key, balance.final_balance);
+                    println!("{}", data);
+                    let mut file = OpenOptions::new()
+                                        .create(true)
+                                        .append(true)
+                                        .open("result.txt")
+                                        .expect("cannot open file");
+                    file.write(data.as_bytes())
+                        .expect("Unable to write data");
                 } else {
                     println!("Missing key for Address: {}, Final Balance: {}", address, balance.final_balance);
                 }
             }
         }
-        if counter % 100 == 0 {
-            print!("\rCurrent count = {}", counter);
+        if counter % 10000 == 0 {
+            println!("\rCurrent count = {}", counter);
         }
         
     }
