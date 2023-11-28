@@ -32,87 +32,48 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let key_pairs: Arc<Mutex<HashMap<String, secp256k1::SecretKey>>> = Arc::new(Mutex::new(HashMap::new()));
     let secp256k1 = Secp256k1::new();
     let (tx, mut rx) = watch::channel(String::new());
-    let mut rx2 = rx.clone();
+    for i in 0..10 {
+        let (key_pairs, mut rx, counter) = (Arc::clone(&key_pairs), rx.clone(), Arc::clone(&counter));
+        tokio::spawn(async move{
+            loop {
+                while rx.changed().await.is_ok() {
+                    let url = rx.borrow_and_update().clone();
+                    let response = query(&url).await.expect("fuck");
+
+                    let key_pairs = key_pairs.lock().unwrap();
+                    for (address, balance) in response.iter() {
+                        if balance.final_balance != 0 {
+                            if let Some(key) = key_pairs.get(address) {
+                                let data = format!("Address: {}, PrivateKey: {}, Final Balance: {}\n", address, key, balance.final_balance);
+                                println!("{}", data);
+                                let mut file = OpenOptions::new()
+                                                    .create(true)
+                                                    .append(true)
+                                                    .open("result.txt")
+                                                    .expect("cannot open file");
+                                file.write(data.as_bytes())
+                                    .expect("Unable to write data");
+                            } else {
+                                println!("Missing key for Address: {}, Final Balance: {}", address, balance.final_balance);
+                            }
+                        }
+                    }
+                    let mut counter = counter.lock().unwrap();
+                    // let counter = Arc::try_unwrap(counter.into()).unwrap();
+                    *counter += 20;
+                    println!("counter: {}", *counter);
+                    if *counter % 10000 == 0 {
+                        println!("\rCurrent count = {}", *counter);
+                    }
+                }
+            }
+        });
+    }
+
     let key_pairs_clone = Arc::clone(&key_pairs);
-    let key_pairs_clone3 = Arc::clone(&key_pairs);
-    let counter_clone = Arc::clone(&counter);
-    let counter_clone2 = Arc::clone(&counter);
-    tokio::spawn(async move{
-        loop {
-            while rx.changed().await.is_ok() {
-                let url = rx.borrow_and_update().clone();
-                let response = query(&url).await.expect("fuck");
-
-                let key_pairs = key_pairs_clone.lock().unwrap();
-                for (address, balance) in response.iter() {
-                    if balance.final_balance != 0 {
-                        if let Some(key) = key_pairs.get(address) {
-                            let data = format!("Address: {}, PrivateKey: {}, Final Balance: {}\n", address, key, balance.final_balance);
-                            println!("{}", data);
-                            let mut file = OpenOptions::new()
-                                                .create(true)
-                                                .append(true)
-                                                .open("result.txt")
-                                                .expect("cannot open file");
-                            file.write(data.as_bytes())
-                                .expect("Unable to write data");
-                        } else {
-                            println!("Missing key for Address: {}, Final Balance: {}", address, balance.final_balance);
-                        }
-                    }
-                }
-                let mut counter: i64 = *counter_clone.lock().unwrap();
-                // let counter = Arc::try_unwrap(counter.into()).unwrap();
-                counter += 20;
-                // println!("{}", counter);
-                if counter % 10000 == 0 {
-                    println!("\rCurrent count = {}", counter);
-                }
-            }
-        }
-    });
-
-    tokio::spawn(async move{
-        loop {
-            while rx2.changed().await.is_ok() {
-                let url = rx2.borrow_and_update().clone();
-                let response = query(&url).await.expect("fuck");
-
-                let key_pairs = key_pairs_clone3.lock().unwrap();
-                for (address, balance) in response.iter() {
-                    if balance.final_balance != 0 {
-                        if let Some(key) = key_pairs.get(address) {
-                            let data = format!("Address: {}, PrivateKey: {}, Final Balance: {}\n", address, key, balance.final_balance);
-                            println!("{}", data);
-                            let mut file = OpenOptions::new()
-                                                .create(true)
-                                                .append(true)
-                                                .open("result.txt")
-                                                .expect("cannot open file");
-                            file.write(data.as_bytes())
-                                .expect("Unable to write data");
-                        } else {
-                            println!("Missing key for Address: {}, Final Balance: {}", address, balance.final_balance);
-                        }
-                    }
-                }
-                let mut counter: i64 = *counter_clone2.lock().unwrap();
-                // let counter = Arc::try_unwrap(counter.into()).unwrap();
-                counter += 20;
-                // println!("{}", counter);
-                if counter % 10000 == 0 {
-                    println!("\rCurrent count = {}", counter);
-                }
-            }
-        }
-    });
-
-    let key_pairs_clone2 = Arc::clone(&key_pairs);
     loop {
         // key_pairs.clear();
         let mut address_string = String::with_capacity(100 * 64);
-
-        // let key_pairs_clone = Arc::clone(&key_pairs);
         
         // let start = Instant::now();
         for _ in 0..20 {
@@ -123,7 +84,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let _address = address::BitcoinAddress::p2pkh(&serialized_public_key, address::Network::Mainnet);
             
-            let mut key_pairs = key_pairs_clone2.lock().unwrap();
+            let mut key_pairs = key_pairs_clone.lock().unwrap();
             key_pairs.insert(_address.clone().to_string(), _private_key.clone());
 
             address_string.push_str(&_address.to_string());
