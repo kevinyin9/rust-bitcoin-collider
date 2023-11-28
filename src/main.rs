@@ -31,9 +31,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let counter = Arc::new(Mutex::new(0 as i64));
     let key_pairs: Arc<Mutex<HashMap<String, secp256k1::SecretKey>>> = Arc::new(Mutex::new(HashMap::new()));
     let secp256k1 = Secp256k1::new();
-    let (tx, mut rx) = watch::channel(String::new());
-    for i in 0..3 {
-        let (key_pairs, mut rx, counter) = (Arc::clone(&key_pairs), rx.clone(), Arc::clone(&counter));
+    let (tx, rx) = watch::channel(String::new());
+    for _ in 0..3 {
+        let (key_pairs, rx, counter) = (Arc::clone(&key_pairs), rx.clone(), Arc::clone(&counter));
         tokio::spawn(async move{
             loop {
                 while rx.changed().await.is_ok() {
@@ -112,7 +112,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn query(s: &String) -> Result<BalanceMap, Box<dyn std::error::Error>> {
     // println!("{}", s);
     const MAX_RETRIES: u32 = 5;
-    const RETRY_DELAY: Duration = Duration::from_secs(5);
     for attempt in 1..=MAX_RETRIES {
         match reqwest::get(s).await {
             Ok(response) => {
