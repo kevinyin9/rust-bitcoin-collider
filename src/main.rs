@@ -10,7 +10,9 @@ use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::time::{Instant, Duration};
-use std::thread;
+use std::sync::{Mutex, Arc};
+use tokio::sync::watch;
+// use tokio::time::Duration;
 
 mod address;
 
@@ -26,43 +28,92 @@ type BalanceMap = std::collections::HashMap<String, Balance>;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // let client = redis::Client::open("redis://127.0.0.1/")?;
-    // let mut con = client.get_connection()?;
-    // let thread_handle = std::thread::spawn(move || {
-    //     let mut key_pairs: Vec<KeyPair> = Vec::new();
-        
-        // loop {
-            // let key_pair_json: Option<String> = conn.rpop("key_pairs").unwrap();
-        
-    //         match key_pair_json {
-    //             Some(json) => {
-    //                 let key_pair: KeyPair = serde_json::from_str(&json).unwrap();
-    //                 key_pairs.push(key_pair);
-        
-    //                 if key_pairs.len() >= 100 {
-    //                     // let body = reqwest::get("https://blockchain.info/balance?active=\"\"")
-    //                     //     .await?
-    //                     //     .text()
-    //                     //     .await?;
-
-    //                     // println!("body = {:?}", body);
-    //                     key_pairs.clear();
-    //                 }
-    //             },
-    //             None => {
-    //                 // Sleep for a while before trying to get the next key pair.
-    //                 std::thread::sleep(std::time::Duration::from_secs(1));
-    //             }
-    //         }
-    //     }
-    // });
-    let mut counter: i64 = 0;
-    let mut key_pairs: HashMap<String, secp256k1::SecretKey> = HashMap::new();
+    let counter = Arc::new(Mutex::new(0 as i64));
+    let key_pairs: Arc<Mutex<HashMap<String, secp256k1::SecretKey>>> = Arc::new(Mutex::new(HashMap::new()));
     let secp256k1 = Secp256k1::new();
+    let (tx, mut rx) = watch::channel(String::new());
+    let mut rx2 = rx.clone();
+    let key_pairs_clone = Arc::clone(&key_pairs);
+    let key_pairs_clone3 = Arc::clone(&key_pairs);
+    let counter_clone = Arc::clone(&counter);
+    let counter_clone2 = Arc::clone(&counter);
+    tokio::spawn(async move{
+        loop {
+            while rx.changed().await.is_ok() {
+                let url = rx.borrow_and_update().clone();
+                let response = query(&url).await.expect("fuck");
+
+                let key_pairs = key_pairs_clone.lock().unwrap();
+                for (address, balance) in response.iter() {
+                    if balance.final_balance != 0 {
+                        if let Some(key) = key_pairs.get(address) {
+                            let data = format!("Address: {}, PrivateKey: {}, Final Balance: {}\n", address, key, balance.final_balance);
+                            println!("{}", data);
+                            let mut file = OpenOptions::new()
+                                                .create(true)
+                                                .append(true)
+                                                .open("result.txt")
+                                                .expect("cannot open file");
+                            file.write(data.as_bytes())
+                                .expect("Unable to write data");
+                        } else {
+                            println!("Missing key for Address: {}, Final Balance: {}", address, balance.final_balance);
+                        }
+                    }
+                }
+                let mut counter: i64 = *counter_clone.lock().unwrap();
+                // let counter = Arc::try_unwrap(counter.into()).unwrap();
+                counter += 20;
+                println!("{}", counter);
+                if counter % 10000 == 0 {
+                    println!("\rCurrent count = {}", counter);
+                }
+            }
+        }
+    });
+
+    tokio::spawn(async move{
+        loop {
+            while rx2.changed().await.is_ok() {
+                let url = rx2.borrow_and_update().clone();
+                let response = query(&url).await.expect("fuck");
+
+                let key_pairs = key_pairs_clone3.lock().unwrap();
+                for (address, balance) in response.iter() {
+                    if balance.final_balance != 0 {
+                        if let Some(key) = key_pairs.get(address) {
+                            let data = format!("Address: {}, PrivateKey: {}, Final Balance: {}\n", address, key, balance.final_balance);
+                            println!("{}", data);
+                            let mut file = OpenOptions::new()
+                                                .create(true)
+                                                .append(true)
+                                                .open("result.txt")
+                                                .expect("cannot open file");
+                            file.write(data.as_bytes())
+                                .expect("Unable to write data");
+                        } else {
+                            println!("Missing key for Address: {}, Final Balance: {}", address, balance.final_balance);
+                        }
+                    }
+                }
+                let mut counter: i64 = *counter_clone2.lock().unwrap();
+                // let counter = Arc::try_unwrap(counter.into()).unwrap();
+                counter += 20;
+                println!("{}", counter);
+                if counter % 10000 == 0 {
+                    println!("\rCurrent count = {}", counter);
+                }
+            }
+        }
+    });
+
+    let key_pairs_clone2 = Arc::clone(&key_pairs);
     loop {
-        key_pairs.clear();
+        // key_pairs.clear();
         let mut address_string = String::with_capacity(100 * 64);
 
+        // let key_pairs_clone = Arc::clone(&key_pairs);
+        
         // let start = Instant::now();
         for _ in 0..20 {
             //generate private and public keys
@@ -71,7 +122,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let serialized_public_key = public_key.serialize();
 
             let _address = address::BitcoinAddress::p2pkh(&serialized_public_key, address::Network::Mainnet);
-
+            
+            let mut key_pairs = key_pairs_clone2.lock().unwrap();
             key_pairs.insert(_address.clone().to_string(), _private_key.clone());
 
             address_string.push_str(&_address.to_string());
@@ -88,48 +140,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // let (_private_key, public_key) = secp256k1.generate_keypair(&mut rng);
         // key_pairs.insert("bc1p7d8n5y3zy3gqrd80huuu9926t9ctll9mla9vk6tvr98ccst9rp9s3uve3d".to_string(), _private_key.clone());
         // address_string.push_str("bc1p7d8n5y3zy3gqrd80huuu9926t9ctll9mla9vk6tvr98ccst9rp9s3uve3d|");
-        
-        counter += 20;
-        let url = "https://blockchain.info/balance?active=".to_string() + &address_string.to_string();
-        let response = query(&url).await?;
 
-        for (address, balance) in response.iter() {
-            if balance.final_balance != 0 {
-                if let Some(key) = key_pairs.get(address) {
-                    let data = format!("Address: {}, PrivateKey: {}, Final Balance: {}\n", address, key, balance.final_balance);
-                    println!("{}", data);
-                    let mut file = OpenOptions::new()
-                                        .create(true)
-                                        .append(true)
-                                        .open("result.txt")
-                                        .expect("cannot open file");
-                    file.write(data.as_bytes())
-                        .expect("Unable to write data");
-                } else {
-                    println!("Missing key for Address: {}, Final Balance: {}", address, balance.final_balance);
-                }
-            }
-        }
-        if counter % 10000 == 0 {
-            println!("\rCurrent count = {}", counter);
-        }
-        
+        let url = "https://blockchain.info/balance?active=".to_string() + &address_string.to_string();
+        tx.send(url)?;
     }
     // Ok(())
 }
 
 async fn query(s: &String) -> Result<BalanceMap, Box<dyn std::error::Error>> {
-    let response = reqwest::get(s).await?;
-    let body = response.text().await?;
-    
-    match serde_json::from_str(&body) {
-        Ok(balance_map) => Ok(balance_map),
-        Err(e) => {
-            eprintln!("body: {}", body);
-            eprintln!("e: {}", e);
-            Err(Box::new(e))
+    println!("{}", s);
+    const MAX_RETRIES: u32 = 5;
+    const RETRY_DELAY: Duration = Duration::from_secs(5);
+    for attempt in 1..=MAX_RETRIES {
+        match reqwest::get(s).await {
+            Ok(response) => {
+                match response.text().await {
+                    Ok(body) => {
+                        match serde_json::from_str(&body) {
+                            Ok(balance_map) => return Ok(balance_map),
+                            Err(e) => {
+                                eprintln!("Failed to parse response on attempt {}: {}", attempt, e);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to get text from response on attempt {}: {}", attempt, e);
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!("Request failed on attempt {}: {}", attempt, e);
+            }
         }
     }
+    Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Request failed after many times")))
 }
 
 
