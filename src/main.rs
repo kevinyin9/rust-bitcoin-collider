@@ -33,7 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let secp256k1 = Secp256k1::new();
     let (tx, rx) = watch::channel(String::new());
     for _ in 0..3 {
-        let (key_pairs, rx, counter) = (Arc::clone(&key_pairs), rx.clone(), Arc::clone(&counter));
+        let (key_pairs, mut rx, counter) = (Arc::clone(&key_pairs), rx.clone(), Arc::clone(&counter));
         tokio::spawn(async move{
             loop {
                 while rx.changed().await.is_ok() {
