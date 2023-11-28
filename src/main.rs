@@ -7,6 +7,7 @@ extern crate bech32;
 use secp256k1::Secp256k1;
 use rand::rngs::OsRng;
 use std::collections::HashMap;
+use std::error::Error;
 
 mod address;
 
@@ -93,9 +94,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn query(s: &String) -> Result<BalanceMap, Box<dyn std::error::Error>> {
     let response = reqwest::get(s).await?;
     let body = response.text().await?;
-    let balance_map: BalanceMap = serde_json::from_str(&body)?;
-
-    Ok(balance_map)
+    
+    match serde_json::from_str(&body) {
+        Ok(balance_map) => Ok(balance_map),
+        Err(e) => {
+            // Here you can log the error and/or handle it as needed
+            eprintln!("Failed to parse JSON: {}", e);
+            Err(Box::new(e))
+        }
+    }
 }
 
 
